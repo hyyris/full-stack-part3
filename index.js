@@ -1,4 +1,5 @@
 const express = require('express')
+const morgan = require('morgan')
 const app = express()
 
 let persons = [
@@ -25,6 +26,13 @@ let persons = [
 ]
 
 app.use(express.json())
+morgan.token('body', function getId (req) {
+    return JSON.stringify(req.body)
+})
+app.use(morgan('tiny'))
+app.use(morgan(':body', {
+    skip: function (req, res) { return req.method !== 'POST' }
+}))
 
 app.get('/', (req, res) => {
   res.send('<h1>Phonebook backend</h1>')
