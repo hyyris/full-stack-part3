@@ -1,3 +1,6 @@
+### LOCATION ###
+https://rocky-escarpment-00797.herokuapp.com/
+### commands ###
 Init project:
 >npm init
 Run the project:
