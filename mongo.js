@@ -10,7 +10,7 @@ const password = process.argv[2]
 const url = `mongodb+srv://phonebook:${password}@cluster0.bd8bi.mongodb.net/phonebook?retryWrites=true&w=majority`
 
 const personSchema = new mongoose.Schema({
-  id: Number,
+  id: String,
   name: String,
   number: String,
 })
