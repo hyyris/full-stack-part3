@@ -15,22 +15,30 @@ app.use(morgan('tiny'))
 app.use(morgan(':body', {
     skip: function (req, res) { return req.method !== 'POST' }
 }))
+const errorHandler = (error, request, response, next) => {
+  console.error(error.message)
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } 
 
-app.get('/info', (req, res) => {
+  next(error)
+}
+app.use(errorHandler) // This should be the last app.use -call!
+
+// Info
+app.get('/info', (req, res, next) => {
   console.log(req);
   Person.find({}).then(persons => {
     res.send(`
       <p>Phonebook has info for ${persons.length} people</p>
       <p>${new Date()}</p>
     `)
-  });
+  })
+  .catch(error => next(error))
 })
 
-const generateId = () => {
-  return Math.floor(Math.random() * 999999)
-}
-
-app.post('/api/persons', (request, response) => {
+// Create
+app.post('/api/persons', (request, response, next) => {
   const body = request.body
 
   if (!body.name || !body.number) {
@@ -46,34 +54,55 @@ app.post('/api/persons', (request, response) => {
   const person = new Person({
     name: body.name,
     number: body.number,
-  });
+  })
   person.save().then(savedPerson => {
     response.json(savedPerson)
-  });
+  })
+  .catch(error => next(error))
   
 })
 
-app.get('/api/persons', (req, res) => {
+// Update
+app.put('/api/persons/:id', (request, response, next) => {
+  const body = request.body
+
+  const person = {
+    name: body.name,
+    number: body.number,
+  }
+
+  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+    .then(updatedPerson => {
+      response.json(updatedPerson)
+    })
+    .catch(error => next(error))
+})
+
+// Read ALL
+app.get('/api/persons', (req, res, next) => {
   Person.find({}).then(persons => {
     res.json(persons)
-  });
+  })
+  .catch(error => next(error))
 })
 
-app.delete('/api/persons/:id', (request, response) => {
-  Person.findByIdAndRemove(request.params.id).then(result => response.status(204).end())
+// Delete
+app.delete('/api/persons/:id', (request, response, next) => {
+  Person.findByIdAndRemove(request.params.id)
+    .then(result => response.status(204).end())
+    .catch(error => next(error))
 })
 
-app.get('/api/persons/:id', (request, response) => {
+// Read
+app.get('/api/persons/:id', (request, response, next) => {
   Person.findById(request.params.id).then(person => {
     if (person) {
       response.json(person);
     } else {
       response.status(404).end()
     }
-  },
-  () => response.status(400).json({ 
-    error: 'Error'
-  }))
+  })
+  .catch(error => next(error))
 })
 
 const PORT = process.env.PORT || 3001
