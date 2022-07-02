@@ -19,27 +19,27 @@ const Person = mongoose.model('Person', personSchema)
 
 mongoose
   .connect(url)
-  .then((result) => {
+  .then(() => {
     console.log('connected')
     if (process.argv.length > 3) {
-        // Tallennetaan henkilö
-        const name = process.argv[3]
-        const number = process.argv[4]
-        const person = new Person({
-          name: name,
-          number: number
-        })
-        console.log(`added ${name} number ${number} to phonebook`);
-        return person.save().then(() => mongoose.connection.close());
+      // Tallennetaan henkilö
+      const name = process.argv[3]
+      const number = process.argv[4]
+      const person = new Person({
+        name: name,
+        number: number
+      })
+      console.log(`added ${name} number ${number} to phonebook`)
+      return person.save().then(() => mongoose.connection.close())
     } else {
       // Haetaan tallennetut
       Person.find({}).then(persons => {
-        console.log('phonebook:');
+        console.log('phonebook:')
         persons.forEach(person => {
           console.log(`${person.name} ${person.number}`)
         })
         mongoose.connection.close()
-      });
+      })
     }
   })
   .catch((err) => console.log(err))
