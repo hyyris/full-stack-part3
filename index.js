@@ -15,15 +15,6 @@ app.use(morgan('tiny'))
 app.use(morgan(':body', {
   skip: function (req) { return req.method !== 'POST' }
 }))
-const errorHandler = (error, _request, response, next) => {
-  console.error(error.message)
-  if (error.name === 'CastError') {
-    return response.status(400).send({ error: 'malformatted id' })
-  }
-
-  next(error)
-}
-app.use(errorHandler) // This should be the last app.use -call!
 
 // Info
 app.get('/info', (req, res, next) => {
@@ -40,24 +31,21 @@ app.get('/info', (req, res, next) => {
 app.post('/api/persons', (request, response, next) => {
   const body = request.body
 
-  if (!body.name || !body.number) {
-    return response.status(400).json({
-      error: 'Missing name or number'
-    })
-  } /*else if (persons.find(p => p.name === body.name)) {
-    return response.status(400).json({
+  Person.find({ name: body.name }).then(persons => {
+    if (persons.length > 0) {
+      response.status(400).json({
         error: 'name must be unique'
       })
-  }*/
-
-  const person = new Person({
-    name: body.name,
-    number: body.number,
+    } else {
+      const person = new Person({
+        name: body.name,
+        number: body.number,
+      })
+      person.save().then(savedPerson => {
+        response.json(savedPerson)
+      }).catch(error => next(error))
+    }
   })
-  person.save().then(savedPerson => {
-    response.json(savedPerson)
-  }).catch(error => next(error))
-
 })
 
 // Update
@@ -69,7 +57,7 @@ app.put('/api/persons/:id', (request, response, next) => {
     number: body.number,
   }
 
-  Person.findByIdAndUpdate(request.params.id, person, { new: true })
+  Person.findByIdAndUpdate(request.params.id, person, { new: true, runValidators: true, context: 'query' })
     .then(updatedPerson => {
       response.json(updatedPerson)
     })
@@ -77,7 +65,7 @@ app.put('/api/persons/:id', (request, response, next) => {
 })
 
 // Read ALL
-app.get('/api/persons', (req, res, next) => {
+app.get('/api/persons', (_req, res, next) => {
   Person.find({}).then(persons => {
     res.json(persons)
   }).catch(error => next(error))
@@ -100,6 +88,18 @@ app.get('/api/persons/:id', (request, response, next) => {
     }
   }).catch(error => next(error))
 })
+
+const errorHandler = (error, _request, response, next) => {
+  if (error.name === 'CastError') {
+    return response.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return response.status(400).json({ error: error.message })
+  }
+
+  next(error)
+}
+
+app.use(errorHandler) // This should be the last app.use -call!
 
 const PORT = process.env.PORT || 3001
 app.listen(PORT, () => {
